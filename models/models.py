@@ -283,4 +283,4 @@ class EncodeProcessDecode(torch.nn.Module):
         sqrtw = w.sqrt().view(-1,1)
         r = self.lam * sqrtw
         e_out = self.projection(e_out, r) # Normalization 
-        return h_out, e_out
+        return h_out, e_out, h_hidden

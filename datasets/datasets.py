@@ -48,9 +48,9 @@ def multiple_knn(params):
         W = gl.weightmatrix.knn(X, k=k_neighbors, kernel='gaussian')
         W.setdiag(0); W.eliminate_zeros()
         data = utils.graphlearning_to_pyg(X, W)
-        U, P = utils.get_pdhg_labels(data, params['lam'])
-        data.U = U
-        data.P = P
+        # U, P = utils.get_pdhg_labels(data, params['lam'])
+        # data.U = U
+        # data.P = P
         dataset.append(data)
     return dataset
 

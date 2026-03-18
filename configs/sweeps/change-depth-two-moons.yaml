@@ -1,11 +1,11 @@
 # configs/pdhg_two_moons.yaml
 experiment:
   dataset:
-    type: single_knn
+    type: multiple_knn
     params:
       base: two_moons
-      n_samples: 100
-      n_graphs: 1
+      n_samples: 200
+      n_graphs: 100
       noise: 0.15
     validation:
       use_train: True
@@ -29,7 +29,7 @@ experiment:
       recurrent_steps: 1
   device: cuda:2
   epochs: 1000
-  loss_function: energy
+  loss_function: latent_space_regularized_energy_pdg
   lr: 0.0001
   batch_size: 64
 

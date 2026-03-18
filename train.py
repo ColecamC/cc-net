@@ -37,8 +37,8 @@ def compute_validation_loss(val_dataloader, model, loss_func, lam, device):
             dst = batch.edge_index[1]
             e_init = batch.x[src] - batch.x[dst]
 
-            h, e = model(h=batch.x.float(), e=e_init.float(), edge_index=batch.edge_index,w=batch.edge_attr.float(),x=batch.x.float())
-            loss_terms = {'U': h, 'X': batch.x, 'src': src, 'dst': dst, 'P': e, 'w': batch.edge_attr, 'lam': lam, 'gt_U': batch.U, 'gt_P':batch.P}
+            h, e, h_latent = model(h=batch.x.float(), e=e_init.float(), edge_index=batch.edge_index,w=batch.edge_attr.float(),x=batch.x.float())
+            loss_terms = {'U': h, 'X': batch.x, 'src': src, 'dst': dst, 'P': e, 'w': batch.edge_attr, 'lam': lam,'U_latent': h_latent}
             loss = loss_func(**loss_terms)
             primal_obj_,fidelity, fusion = losses.energy(**loss_terms, return_parts = True)
             avg_fidelity += fidelity.item()/batch.num_graphs
@@ -63,7 +63,7 @@ def compute_kkt_residuals(val_dataloader, model, lam, device, eps=1e-8):
             dst = batch.edge_index[1]
             e_init = batch.x[src] - batch.x[dst]
 
-            h, e = model(h=batch.x.float(), e=e_init.float(), edge_index=batch.edge_index,w=batch.edge_attr.float(), x=batch.x.float())
+            h, e, _ = model(h=batch.x.float(), e=e_init.float(), edge_index=batch.edge_index,w=batch.edge_attr.float(), x=batch.x.float())
             kkt_dict = losses.kkt_residuals(h, e, batch.x, src, dst, batch.edge_attr, lam)
             for key in return_dict:
                 return_dict[key] += kkt_dict[key]
@@ -94,9 +94,6 @@ def train(train_dataset, val_dataset,dataset_str, model_config, device,
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
     # initialize model
-
-    # TODO: fix the model initialization here for EncodeProcessDecode model.
-    # TODO: fix the yaml to be compatible
     model_class = getattr(models, model_config['model'])
     model = model_class(**model_config['cfg'])
     model = model.float()
@@ -163,13 +160,18 @@ def train(train_dataset, val_dataset,dataset_str, model_config, device,
             src = batch.edge_index[0]
             dst = batch.edge_index[1]
             e_init = batch.x[src] - batch.x[dst]
-            h, e = model(h=batch.x.float(), 
+            h, e, h_latent = model(h=batch.x.float(), 
                          e=e_init.float(), 
                          edge_index=batch.edge_index, 
                          w=batch.edge_attr.float(),
                          x=batch.x.float())
-            loss_terms = {'U': h, 'X': batch.x, 'src': src, 'dst': dst, 'P': e, 'w': batch.edge_attr, 'lam': lam, 'gt_U': batch.U, 'gt_P':batch.P}
-            loss = loss_func(**loss_terms)/batch.num_graphs
+            temp = {'U': h, 'X': batch.x, 
+                    'src': src, 'dst': dst, 
+                    'P': e, 'w': batch.edge_attr, 
+                    'lam': lam,  
+                    'U_latent': h_latent}
+            # temp = {'U': h, 'X': batch.x, 'src': src, 'dst': dst, 'P': e, 'w': batch.edge_attr, 'lam': lam, 'gt_U': batch.U, 'gt_P':batch.P, 'U_latent': h_latent}
+            loss = loss_func(**temp)/batch.num_graphs
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
